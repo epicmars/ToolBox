@@ -13,13 +13,7 @@
 
 #include "flutter/generated_plugin_registrant.h"
 
-static int GetBatteryLevel() {
-    SYSTEM_POWER_STATUS status;
-    if (GetSystemPowerStatus(&status) == 0 || status.BatteryLifePercent == 255) {
-        return -1;
-    }
-    return status.BatteryLifePercent;
-}
+#include "hardware_utils.h"
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
@@ -47,10 +41,10 @@ bool FlutterWindow::OnCreate() {
       flutter_controller_->engine()->messenger(), "samples.flutter.dev/battery",
       &flutter::StandardMethodCodec::GetInstance());
   channel.SetMethodCallHandler(
-      [](const flutter::MethodCall<>& call,
+      [&](const flutter::MethodCall<>& call,
           std::unique_ptr<flutter::MethodResult<>> result) {
               if (call.method_name() == "getBatteryLevel") {
-                  int battery_level = GetBatteryLevel();
+                  int battery_level = hd_utils_.GetBatteryLevel();
                   if (battery_level != -1) {
                       result->Success(battery_level);
                   }
