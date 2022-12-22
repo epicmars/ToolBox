@@ -653,6 +653,25 @@ runtime：业务主要在这里定义壳子代理组件的实际类
 - 插件loader：loader的动态实现，业务主要在这里定义插件组件和壳子代理组件的配对关系等。
 - 插件runtime：runtime的动态实现，业务主要在这里定义壳子代理组件的实际类。
 
+
+
+以启动一个插件Activity为例：
+- 插件app中定义了一个启动页面com.tencent.shadow.sample.plugin.app.lib.gallery.splash.SplashActivity
+- 插件runtime中定义了壳子代理com.tencent.shadow.sample.plugin.runtime.PluginDefaultProxyActivity
+- 在宿主应用MainActivity中，点击入口打开插件应用的SplashActivity。其中PluginLoadActivity也是定义在宿主应用中的activity，负责加载插件管理器DynamicPluginManager（也是从一个apk加载，类使用ApkClassLoader进行加载），然后使用插件管理器获取一个插件管理器的具体实现SamplePluginManager。接着SamplePluginManager进入插件应用的启动流程。
+
+```java
+    Intent intent = new Intent(MainActivity.this, PluginLoadActivity.class);
+    intent.putExtra(Constant.KEY_PLUGIN_PART_KEY, "sample-base");
+    intent.putExtra(Constant.KEY_ACTIVITY_CLASSNAME, "com.tencent.shadow.sample.plugin.app.lib.gallery.splash.SplashActivity");
+    startActivity(intent);
+```
+
+
+- SamplePluginManager进入插件activity启动入口，安装插件apk，加载插件Loader（插件Loader是封装了插件进程服务的Binder代理对象，这样就可以调用到插件进程的服务），然后通过这个Loader来启动插件进程中的activity，这里Loader会将上面原始Intent中要启动的目标activity`"com.tencent.shadow.sample.plugin.app.lib.gallery.splash.SplashActivity"`替换为`com.tencent.shadow.sample.plugin.runtime.PluginDefaultProxyActivity`。
+
+- 插件进程对应的远程Binder接收到调用请求，插件进程中的Loader进行activity的启动，实际启动的是`com.tencent.shadow.sample.plugin.runtime.PluginDefaultProxyActivity`, 然后使用类加载器加载`"com.tencent.shadow.sample.plugin.app.lib.gallery.splash.SplashActivity"`，并将`SplashActivity`的逻辑全部委托给`PluginDefaultProxyActivity`执行。
+
 ![Android插件化-Shadow-时序](Android插件化-Shadow-时序.jpg)
 
 
